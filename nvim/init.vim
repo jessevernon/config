@@ -17,6 +17,7 @@ Plug 'ludovicchabant/vim-gutentags'
 Plug 'stefandtw/quickfix-reflector.vim'
 Plug 'neomake/neomake'
 Plug 'tpope/vim-sensible'
+Plug 'idanarye/vim-merginal'
 call plug#end()
 
 " FISH!
@@ -55,7 +56,7 @@ set diffopt=filler,iwhite,vertical
 " Gutentags settings
 let g:gutentags_ctags_executable="ctags"
 let g:gutentags_ctags_extra_args=["--tag-relative=no"]
-let g:gutentags_ctags_exclude=["*node_modules*","*generated*","*packages*","*HostedOps*","*karma*","*.git*", "*Web Reference*","Reference.cs"]
+let g:gutentags_ctags_exclude=["*node_modules*","*generated*","*packages*","*HostedOps*","*karma*","*.git*", "*Web Reference*","Reference.cs","*Scripts*"]
 let g:gutentags_ctags_tagfile=".git/tags"
 
 " Set tabs to 4 characters and expand to spaces, activate smart indenation.
@@ -333,7 +334,7 @@ let g:airline#extensions#neomake#enabled = 1
 
 " Make
 "set makeprg=python\ c:\\git\\panhacks\\python\\build.py\ -s\ c:\\git\\panopto-core\\PanoptoCurrent.sln\ -p\ 
-set makeprg=/usr/local/bin/remote-build.sh\ python\ c:\\git\\panhacks\\python\\build.py\ -s\ c:\\git\\panopto-core\\PanoptoCurrent.sln\ -p\
+set makeprg=/usr/local/bin/remote-build-2.sh\ python\ c:\\git\\panhacks\\python\\build.py\ -o\ -s\ c:\\git\\panopto-core\\PanoptoCurrent.sln\ -p\
 
 function! FindGlob(pattern, path)
     let fullpattern = a:path . "/" . a:pattern
@@ -366,6 +367,8 @@ function! SetParameters(...) dict
         let maker.args = maker.args . ' -p ' . l:projectname . '"'
     elseif maker.name == 'msbuildConfigurable'
         let maker.args = maker.args . ' ' . g:msbuild_configuration . '"'
+    elseif maker.name == 'testConfigurable'
+        let maker.args = maker.args . ' ' . g:test_configuration . "'"
     endif
     return maker
 endfunction
@@ -379,34 +382,69 @@ function! BuildProject(project_name)
     execute 'copen'
 endfunction
 
+" Function to build a specific project
+function! Test(project_name, test_filter)
+    let g:test_configuration = '-p ' . a:project_name . ' -f "' . a:test_filter . '"'
+    execute 'NeomakeCancelJobs'
+    execute 'cexpr ["test running..."]'
+    execute 'Neomake! testConfigurable'
+    execute 'copen'
+endfunction
+
+function! Sync()
+    execute 'NeomakeCancelJobs'
+    execute 'cexpr ["syncing..."]'
+    execute 'Neomake! sync'
+    execute 'copen'
+endfunction
 
 call neomake#config#set('ft.cs.InitForJob', function('SetParameters'))
+call neomake#config#set('InitForJob', function('SetParameters'))
 
 let g:neomake_cs_msbuild_maker = {
     \ 'exe': 'bash',
-    \ 'args': '/usr/local/bin/remote-build.sh "python c:\\git\\panhacks\\python\\build.py -s c:\\git\\panopto-core\\PanoptoCurrent.sln',
+    \ 'args': '/usr/local/bin/remote-build-2.sh "python c:\\git\\panhacks\\python\\build.py -s c:\\git\\panopto-core\\PanoptoCurrent.sln',
     \ 'append_file': 0,
     \ 'errorformat': '%f:%l:%c:%t:%m',
+    \ 'mapexpr': "substitute(substitute(v:val, '\\', '/', 'g'), 'c:/git/panopto-core/', '~/src/panopto-core/', '')",
     \ }
 
-let g:neomake_cs_msbuildConfigurable_maker = {
+let g:neomake_msbuildConfigurable_maker = {
     \ 'exe': 'bash',
-    \ 'args': '/usr/local/bin/remote-build.sh "python c:\\git\\panhacks\\python\\build.py -s c:\\git\\panopto-core\\PanoptoCurrent.sln',
+    \ 'args': '/usr/local/bin/remote-build-2.sh "python c:\\git\\panhacks\\python\\build.py -s c:\\git\\panopto-core\\PanoptoCurrent.sln',
     \ 'append_file': 0,
     \ 'errorformat': '%f:%l:%c:%t:%m',
+    \ 'mapexpr': "substitute(substitute(v:val, '\\', '/', 'g'), 'c:/git/panopto-core/', '~/src/panopto-core/', '')",
     \ }
 
 let g:neomake_cs_test_maker = {
     \ 'exe': 'bash',
-    \ 'args': '/usr/local/bin/remote-build.sh "python c:\\git\\panhacks\\python\\test.py -s c:\\git\\panopto-core\\PanoptoCurrent.sln',
+    \ 'args': '/usr/local/bin/remote-build-2.sh "python c:\\git\\panhacks\\python\\test.py -s c:\\git\\panopto-core\\PanoptoCurrent.sln',
     \ 'append_file': 0,
     \ 'errorformat': '%m',
+    \ 'mapexpr': "substitute(substitute(v:val, '\\', '/', 'g'), 'c:/git/panopto-core/', '~/src/panopto-core/', '')",
+    \ }
+
+let g:neomake_testConfigurable_maker = {
+    \ 'exe': 'bash',
+    \ 'args': "/usr/local/bin/remote-run.sh 'python c:\\git\\panhacks\\python\\test.py -s c:\\git\\panopto-core\\PanoptoCurrent.sln",
+    \ 'append_file': 0,
+    \ 'errorformat': '%m',
+    \ 'mapexpr': "substitute(substitute(v:val, '\\', '/', 'g'), 'c:/git/panopto-core/', '~/src/panopto-core/', '')",
+    \ }
+
+let g:neomake_sync_maker = {
+    \ 'exe': 'bash',
+    \ 'args': "/usr/local/bin/remote-build-2.sh 'echo done'",
+    \ 'append_file': 0,
+    \ 'errorformat': '%m',
+    \ 'mapexpr': "substitute(substitute(v:val, '\\', '/', 'g'), 'c:/git/panopto-core/', '~/src/panopto-core/', '')",
     \ }
 
 let g:neomake_cs_enabled_makers = ['msbuild']
 let g:neomake_open_list = 0
 
-call neomake#configure#automake('w')
+call neomake#configure#automake('')
 
 " Quickfix do not auto-open; makes Neomake chaos
 let g:qf_auto_open_quickfix = 0
@@ -439,72 +477,79 @@ map <C-h> <C-w>h
 map <C-j> <C-w>j
 map <C-k> <C-w>k
 map <C-l> <C-w>l
-nmap L <C-d>
-nmap H <C-u>
-nmap K [{
-nmap J [}
+map L <C-d>
+map H <C-u>
+map K [{
+map J [}
 
 " Text searching <leader>hjkl
-nmap <leader>j :grep! "" \| cw<Left><Left><Left><Left><Left><Left>
-nmap <leader>J :grep! "" "%:h" \| cw<Left><Left><Left><Left><Left><Left><Left><Left><Left><Left><Left><Left>
-nmap <leader>k :grep! "\b<cword>\b"<CR>:cw<CR>
-nmap <leader>l :lvimgrepa! "\b<cword>\b"<CR>:cw<CR>
+map <leader>j :grep! "" \| cw<Left><Left><Left><Left><Left><Left>
+map <leader>J :grep! "" "%:h" \| cw<Left><Left><Left><Left><Left><Left><Left><Left><Left><Left><Left><Left>
+map <leader>k :grep! "\b<cword>\b"<CR>:cw<CR>
+map <leader>l :lvimgrepa! "\b<cword>\b"<CR>:cw<CR>
 
 " Text editing
-nmap <leader>d "_d
-nnoremap <leader>u J
+map <leader>d "_d
+noremap <leader>u J
 inoremap <C-r> <C-g>u<C-r>
-nmap <leader>h :noh<CR>
+map <leader>h :noh<CR>
+tmap <leader>h <C-\><C-N>:noh<CR>
 nnoremap <silent> <expr> <CR> &buftype ==# 'quickfix' ? "\<CR>" : Highlighting()
 nnoremap <leader>. ;
 nnoremap gp `[v`]
 
-" Quickfix / loclist <leader>nm,.M<>
-nmap <leader>n :cp<CR>
-nmap <leader>m :cn<CR>
-nmap <leader>, :lp<CR>
-nmap <leader>. :lne<CR>
-nmap <leader>N :copen<CR>
-nmap <leader>M :cclose<CR>
-nmap <leader>< :lopen<CR>
-nmap <leader>> :lclose<CR>
+" Quickfix / loclist / diff <leader>nm,.M<>
+map <leader>N :copen \| cp<CR>
+map <leader>n :copen \| cn<CR>
+map <leader>m :if len(filter(range(1, winnr('$')), 'getwinvar(v:val, "&ft") == "qf"')) == 0 \| copen \| else \| cclose \| endif<CR>
+map <leader>M :if len(filter(range(1, winnr('$')), 'getwinvar(v:val, "&ft") == "qf"')) == 0 \| lopen \| else \| lclose \| endif<CR>
+map <leader>, :lopen \| lne<CR>
+map <leader>< :lopen \| lp<CR>
+map <leader>. ]c
+map <leader>> [c
+map <leader>/ :diffoff! \| Gdiff<CR>
+map <leader>? :diffoff!<CR>
 
 " IDE <leader>ert
-nmap <leader>t :NERDTreeToggle<CR>
-nmap <leader>T :NERDTreeFind<CR>
-nmap <leader>r :TagbarToggle<CR>
-nmap <leader>e :call GstatusToggle()<CR>
+map <leader>t :NERDTreeToggle<CR>
+map <leader>T :NERDTreeFind<CR>
+map <leader>r :TagbarToggle<CR>
+map <leader>e :call GstatusToggle()<CR>
 
 " Tag jumping <leader>zxcvb
-nmap <leader>z g<C-]>
-nmap <leader>x <C-W>g}
-nmap <leader>c :lt <cword> \| lopen<CR>
-nmap <leader>V :tp<CR>
-nmap <leader>v :tn<CR>
+map <leader>z g<C-]>
+map <leader>x <C-W>g}
+map <leader>c :lt <cword> \| lopen<CR>
+map <leader>V :tp<CR>
+map <leader>v :tn<CR>
 
 " Buffers <leader>qwQ
-nmap <leader>q :call SwitchLastBuffer()<CR>
+map <leader>q :call SwitchLastBuffer()<CR>
 tmap <leader>q <C-\><C-n>:b#<CR>
+map <leader>Q :term<CR>:startinsert<CR>
 map <leader>w :only<CR>
-map <leader>Q :terminal "bash.cmd"<CR>:startinsert<CR>
+tmap <leader>w <C-\><C-n>:only<CR>
+map <leader>W :close<CR>
+tmap <leader>W <C-\><C-n>:close<CR>
 
 " FZF <leader>asdfg
 map  <Leader>a :BLines<CR>
-nmap <Leader>a :BLines<CR>
 tmap <Leader>a <C-\><C-n>:BLines<CR>
 
 map  <Leader>s :BTags<CR>
-nmap <Leader>s :BTags<CR>
 tmap <Leader>s <C-\><C-n>:BTags<CR>
 
 map  <Leader>b :Buffers<CR>
-nmap <Leader>b :Buffers<CR>
 tmap <Leader>b <C-\><C-n>:Buffers<CR>
 
 map  <Leader>f :Tags<CR>
-nmap <Leader>f :Tags<CR>
 tmap <Leader>f <C-\><C-n>:Tags<CR>
 
 map  <Leader>g :Files<CR>
-nmap  <Leader>g :Files<CR>
 tmap <Leader>g <C-\><C-n>:Files<CR>
+
+" Fugitive history browser
+command! -nargs=* Glg Git! log --graph --pretty=format:'\%h - (\%ad)\%d \%s <\%an>' --abbrev-commit --date=local <args>
+
+" Map Y to y$
+noremap Y y$
