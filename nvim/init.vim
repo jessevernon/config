@@ -11,7 +11,7 @@ Plug 'majutsushi/tagbar'
 Plug 'tpope/vim-abolish'
 Plug 'tpope/vim-fugitive'
 Plug 'romainl/vim-qf'
-Plug 'morhetz/gruvbox'
+"Plug 'morhetz/gruvbox'
 Plug 'tpope/vim-rsi'
 Plug 'ludovicchabant/vim-gutentags'
 Plug 'stefandtw/quickfix-reflector.vim'
@@ -19,8 +19,8 @@ Plug 'neomake/neomake'
 Plug 'tpope/vim-sensible'
 call plug#end()
 
-" FISH!
-set shell=/usr/bin/fish
+" ZSH!
+set shell=/usr/bin/zsh
 
 " Set a more convenient leader key on an AZERTY layout than the default backslash
 let mapleader = ","
@@ -57,6 +57,7 @@ let g:gutentags_ctags_executable="ctags"
 let g:gutentags_ctags_extra_args=["--tag-relative=no"]
 let g:gutentags_ctags_exclude=["*node_modules*","*generated*","*packages*","*HostedOps*","*karma*","*.git*", "*Web Reference*","Reference.cs"]
 let g:gutentags_ctags_tagfile=".git/tags"
+"let g:gutentags_enabled=0
 
 " Set tabs to 4 characters and expand to spaces, activate smart indenation.
 " See tabstop help for more info.
@@ -66,6 +67,7 @@ set tabstop=4
 set shiftwidth=4
 set softtabstop=4
 filetype plugin indent on
+set omnifunc=syntaxcomplete#Complete
 
 " Set wildchar visual completion awesomeness.
 " This is enhanced command line completion and it rocks.
@@ -81,8 +83,8 @@ syntax enable
 syntax on
 
 " Set theme
-color gruvbox
-set background=dark
+" color gruvbox
+" set background=dark
 
 " Show matching parens
 set showmatch
@@ -95,9 +97,6 @@ autocmd BufNewFile,BufReadPost *.ttinclude set filetype=cs
 
 " If you don't have this set already, then do so. It makes vim work like every other multiple-file editor on the planet. You can have edited buffers that aren't visible in a window somewhere.
 set hidden
-
-" Use ~x on an English Windows version or ~n for French.
-au GUIEnter * simalt ~x
 
 " Turn off backups
 set nobackup
@@ -219,10 +218,10 @@ set splitright
 
 " Set the cursor
 "set guicursor=n-v-c:block-Cursor/lCursor-blinkon1,i-ci:ver25-Cursor/lCursor,r-cr:hor20-Cursor/lCursor
-let $NVIM_TUI_ENABLE_CURSOR_SHAPE=1
-let &t_SI .= "\<Esc>[6 q"
-let &t_SR .= "\<Esc>[4 q"
-let &t_EI .= "\<Esc>[2 q"
+" let $NVIM_TUI_ENABLE_CURSOR_SHAPE=1
+" let &t_SI .= "\<Esc>[6 q"
+" let &t_SR .= "\<Esc>[4 q"
+" let &t_EI .= "\<Esc>[2 q"
 
 " Run SQL
 function! RunSqlCmd(format, vert, line1, line2, ...)
@@ -312,18 +311,10 @@ command! -bang BD bp|bd<bang> #
 command! PrettyXML :set filetype=xml | %!python3 -c "import xml.dom.minidom, sys; print(xml.dom.minidom.parse(sys.stdin).toprettyxml())"
 
 " Pretty print Json
-command! PrettyJson :set filetype=json | %!python -m "json.tool"
-
-" Fix temp file error
-command! FixTempDirectory :!mkdir C:\Users\jvernon\AppData\Local\Temp\nvimyblkab
+command! PrettyJson :set filetype=json | %!python3 -m "json.tool"
 
 " Find command
 command! -bang -nargs=* Find call fzf#vim#grep('rg --column --line-number --no-heading --fixed-strings --ignore-case --no-ignore --hidden --follow --glob "!.git/*" --color "always" '.shellescape(<q-args>), 1, <bang>0)
-
-" Function to change slash direction
-function! ForwardSlash(expr)
-    echom substitute(expr, "\\", "/", "g")
-endfunction
 
 " Airline settings
 " let g:airline_section_b = ''
@@ -332,8 +323,7 @@ endfunction
 let g:airline#extensions#neomake#enabled = 1
 
 " Make
-"set makeprg=python\ c:\\git\\panhacks\\python\\build.py\ -s\ c:\\git\\panopto-core\\PanoptoCurrent.sln\ -p\ 
-set makeprg=/usr/local/bin/remote-build.sh\ python\ c:\\git\\panhacks\\python\\build.py\ -s\ c:\\git\\panopto-core\\PanoptoCurrent.sln\ -p\
+set makeprg=python3\ ~/git/cloud-dev/devbox.py
 
 function! FindGlob(pattern, path)
     let fullpattern = a:path . "/" . a:pattern
@@ -361,52 +351,59 @@ function! SetParameters(...) dict
     if maker.name == 'test'
         let l:currentmethod = tagbar#currenttag('%s', '')
         let l:methodfilter = '"method == ' . substitute(l:currentmethod, '[()]', '', 'g') . '"'
-        let maker.args = maker.args . ' -p ' . l:projectname . ' -f ' . l:methodfilter . '"'
+        let maker.args = maker.args . ' -p ' . l:projectname . ' -f ' . l:methodfilter
     elseif maker.name =='msbuild'
-        let maker.args = maker.args . ' -p ' . l:projectname . '"'
+        let maker.args = maker.args . ' -p ' . l:projectname
     elseif maker.name == 'msbuildConfigurable'
-        let maker.args = maker.args . ' ' . g:msbuild_configuration . '"'
+        let maker.args = maker.args . ' ' . g:msbuild_configuration
     endif
     return maker
 endfunction
 
 " Function to build a specific project
 function! BuildProject(project_name)
-    let g:msbuild_configuration = '-p ' . a:project_name
+    let g:msbuild_configuration = ' -p ' . a:project_name
     execute 'NeomakeCancelJobs'
     execute 'cexpr ["building..."]'
     execute 'Neomake! msbuildConfigurable'
     execute 'copen'
 endfunction
 
+function PostprocessFilenames(entry)
+    let a:entry.type = 'W'
+    endif
+endfunction
 
 call neomake#config#set('ft.cs.InitForJob', function('SetParameters'))
 
 let g:neomake_cs_msbuild_maker = {
-    \ 'exe': 'bash',
-    \ 'args': '/usr/local/bin/remote-build.sh "python c:\\git\\panhacks\\python\\build.py -s c:\\git\\panopto-core\\PanoptoCurrent.sln',
+    \ 'exe': 'python3',
+    \ 'args': '~/git/cloud-dev/devbox.py gitbuild ',
     \ 'append_file': 0,
     \ 'errorformat': '%f:%l:%c:%t:%m',
+    \ 'mapexpr': 'substitute(substitute(v:val, "\\", "/", "g"), "c:/git/", "~/git/", "")'
     \ }
 
 let g:neomake_cs_msbuildConfigurable_maker = {
-    \ 'exe': 'bash',
-    \ 'args': '/usr/local/bin/remote-build.sh "python c:\\git\\panhacks\\python\\build.py -s c:\\git\\panopto-core\\PanoptoCurrent.sln',
+    \ 'exe': 'python3',
+    \ 'args': '~/git/cloud-dev/devbox.py gitbuild ',
     \ 'append_file': 0,
     \ 'errorformat': '%f:%l:%c:%t:%m',
+    \ 'mapexpr': 'substitute(substitute(v:val, "\\", "/", "g"), "c:/git/", "~/git/", "")'
     \ }
 
 let g:neomake_cs_test_maker = {
-    \ 'exe': 'bash',
-    \ 'args': '/usr/local/bin/remote-build.sh "python c:\\git\\panhacks\\python\\test.py -s c:\\git\\panopto-core\\PanoptoCurrent.sln',
+    \ 'exe': 'python3',
+    \ 'args': '~/git/cloud-dev/devbox.py test ',
     \ 'append_file': 0,
     \ 'errorformat': '%m',
+    \ 'mapexpr': 'substitute(substitute(v:val, "\\", "/", "g"), "c:/git/", "~/git/", "")'
     \ }
 
 let g:neomake_cs_enabled_makers = ['msbuild']
 let g:neomake_open_list = 0
 
-call neomake#configure#automake('w')
+"call neomake#configure#automake('w')
 
 " Quickfix do not auto-open; makes Neomake chaos
 let g:qf_auto_open_quickfix = 0
@@ -417,7 +414,7 @@ function! GstatusToggle()
     let l:fugitive = bufnr('.git/index')
     let l:isopen = l:fugitive > -1 && bufloaded(l:fugitive)
     if !l:isopen
-        execute 'Gstatus'
+        execute 'Git'
         execute "normal \<C-w>L"
         setlocal nonumber
         execute 'vertical res 50'
@@ -425,6 +422,20 @@ function! GstatusToggle()
     else
         execute l:fugitive . 'bd'
     endif
+endfunction
+
+" Function to get visual selection
+function! Get_visual_selection()
+    " Why is this not a built-in Vim script function?!
+    let [line_start, column_start] = getpos("'<")[1:2]
+    let [line_end, column_end] = getpos("'>")[1:2]
+    let lines = getline(line_start, line_end)
+    if len(lines) == 0
+        return ''
+    endif
+    let lines[-1] = lines[-1][: column_end - (&selection == 'inclusive' ? 1 : 2)]
+    let lines[0] = lines[0][column_start - 1:]
+    return join(lines, "\n")
 endfunction
 
 " Mappings!
@@ -439,20 +450,24 @@ map <C-h> <C-w>h
 map <C-j> <C-w>j
 map <C-k> <C-w>k
 map <C-l> <C-w>l
-nmap L <C-d>
-nmap H <C-u>
-nmap K [{
-nmap J [}
+map L <C-d>
+map H <C-u>
+map K [{
+map J [}
 
 " Text searching <leader>hjkl
 nmap <leader>j :grep! "" \| cw<Left><Left><Left><Left><Left><Left>
 nmap <leader>J :grep! "" "%:h" \| cw<Left><Left><Left><Left><Left><Left><Left><Left><Left><Left><Left><Left>
 nmap <leader>k :grep! "\b<cword>\b"<CR>:cw<CR>
+nmap <leader>K :grep! "\b<cword>\b" "%:h" \| cw
 nmap <leader>l :lvimgrepa! "\b<cword>\b"<CR>:cw<CR>
+nmap <leader>L :lvimgrepa! -i "\b<cword>\b"<CR>:cw<CR>
+vmap <leader>k :<C-U>execute('grep! "\b' . Get_visual_selection() . '\b"')<CR>:cw<CR>
+vmap <leader>K :<C-U>execute('grep! "\b' . Get_visual_selection(o % . '\b" "%:h"') \| cw
 
 " Text editing
-nmap <leader>d "_d
-nnoremap <leader>u J
+map <leader>d "_d
+noremap <leader>u J
 inoremap <C-r> <C-g>u<C-r>
 nmap <leader>h :noh<CR>
 nnoremap <silent> <expr> <CR> &buftype ==# 'quickfix' ? "\<CR>" : Highlighting()
@@ -460,51 +475,78 @@ nnoremap <leader>. ;
 nnoremap gp `[v`]
 
 " Quickfix / loclist <leader>nm,.M<>
-nmap <leader>n :cp<CR>
-nmap <leader>m :cn<CR>
-nmap <leader>, :lp<CR>
-nmap <leader>. :lne<CR>
-nmap <leader>N :copen<CR>
-nmap <leader>M :cclose<CR>
-nmap <leader>< :lopen<CR>
-nmap <leader>> :lclose<CR>
+map <leader>n :cn<CR>
+map <leader>m :if empty(filter(getwininfo(), 'v:val.quickfix')) \| copen \| else \| cclose \| endif<CR>
+map <leader>N :ln<CR>
+map <leader>M :if empty(filter(getwininfo(), 'v:val.quickfix')) \| lopen \| else \| lclose \| endif<CR>
 
 " IDE <leader>ert
-nmap <leader>t :NERDTreeToggle<CR>
-nmap <leader>T :NERDTreeFind<CR>
-nmap <leader>r :TagbarToggle<CR>
-nmap <leader>e :call GstatusToggle()<CR>
+map <leader>t :NERDTreeToggle<CR>
+map <leader>T :NERDTreeFind<CR>
+map <leader>r :TagbarToggle<CR>
+map <leader>e :call GstatusToggle()<CR>
 
 " Tag jumping <leader>zxcvb
-nmap <leader>z g<C-]>
-nmap <leader>x <C-W>g}
-nmap <leader>c :lt <cword> \| lopen<CR>
-nmap <leader>V :tp<CR>
-nmap <leader>v :tn<CR>
+map <leader>z g<C-]>
+map <leader>x <C-W>g}
+map <leader>c :lt <cword> \| lopen<CR>
+map <leader>V :tp<CR>
+map <leader>v :tn<CR>
 
 " Buffers <leader>qwQ
-nmap <leader>q :call SwitchLastBuffer()<CR>
+map <leader>q :call SwitchLastBuffer()<CR>
 tmap <leader>q <C-\><C-n>:b#<CR>
 map <leader>w :only<CR>
-map <leader>Q :terminal "bash.cmd"<CR>:startinsert<CR>
+tmap <leader>w <C-\><C-n>:only<CR>
+map <leader>W :close<CR>
+tmap <leader>W <C-\><C-n>:close<CR>
+map <leader>Q :term
 
 " FZF <leader>asdfg
 map  <Leader>a :BLines<CR>
-nmap <Leader>a :BLines<CR>
 tmap <Leader>a <C-\><C-n>:BLines<CR>
-
 map  <Leader>s :BTags<CR>
-nmap <Leader>s :BTags<CR>
 tmap <Leader>s <C-\><C-n>:BTags<CR>
-
 map  <Leader>b :Buffers<CR>
-nmap <Leader>b :Buffers<CR>
 tmap <Leader>b <C-\><C-n>:Buffers<CR>
-
 map  <Leader>f :Tags<CR>
-nmap <Leader>f :Tags<CR>
 tmap <Leader>f <C-\><C-n>:Tags<CR>
-
 map  <Leader>g :Files<CR>
-nmap  <Leader>g :Files<CR>
 tmap <Leader>g <C-\><C-n>:Files<CR>
+
+" Make nvr git integration work with wq
+autocmd FileType gitcommit,gitrebase,gitconfig set bufhidden=delete
+
+"command! MutliLineFunction execute 'normal ^y0f(a<CR><ESC>^"_d0Pi    <ESC>'
+
+function! PInsert2(item)
+	let @z=a:item
+	norm "zp
+	call feedkeys('a')
+endfunction
+
+function! CompleteInf()
+	let nl=[]
+	let l=complete_info()
+	for k in l['items']
+		call add(nl, k['word']. ' : ' .k['info'] . ' '. k['menu'] )
+	endfor 
+	call fzf#vim#complete(fzf#wrap({ 'source': nl,'reducer': { lines -> split(lines[0], '\zs :')[0] },'sink':function('PInsert2')}))
+endfunction 
+
+imap <C-t> <CMD>:call CompleteInf()<CR>
+
+set completeopt=longest,menuone
+inoremap <expr> <CR> pumvisible() ? "\<C-y>" : "\<C-g>u\<CR>"
+
+inoremap <expr> <C-n> pumvisible() ? '<C-n>' :
+  \ '<C-n><C-r>=pumvisible() ? "\<lt>Down>" : ""<CR>'
+
+inoremap <expr> <M-,> pumvisible() ? '<C-n>' :
+  \ '<C-x><C-o><C-n><C-p><C-r>=pumvisible() ? "\<lt>Down>" : ""<CR>'
+
+" Color scheme
+highlight DiffAdd    cterm=bold ctermfg=10 ctermbg=17 gui=none guifg=bg guibg=Red
+highlight DiffDelete cterm=bold ctermfg=10 ctermbg=17 gui=none guifg=bg guibg=Red
+highlight DiffChange cterm=bold ctermfg=10 ctermbg=17 gui=none guifg=bg guibg=Red
+highlight DiffText   cterm=bold ctermfg=10 ctermbg=88 gui=none guifg=bg guibg=Red
