@@ -17,6 +17,7 @@ Plug 'ludovicchabant/vim-gutentags'
 Plug 'stefandtw/quickfix-reflector.vim'
 Plug 'neomake/neomake'
 Plug 'tpope/vim-sensible'
+Plug 'MattesGroeger/vim-bookmarks'
 call plug#end()
 
 " ZSH!
@@ -54,7 +55,7 @@ set diffopt=filler,iwhite,vertical
 
 " Gutentags settings
 let g:gutentags_ctags_executable="ctags"
-let g:gutentags_ctags_extra_args=["--tag-relative=no"]
+let g:gutentags_ctags_extra_args=['regex-SQL=''/create procedure(.*)/\1/f/i''']
 let g:gutentags_ctags_exclude=["*node_modules*","*generated*","*packages*","*HostedOps*","*karma*","*.git*", "*Web Reference*","Reference.cs"]
 let g:gutentags_ctags_tagfile=".git/tags"
 "let g:gutentags_enabled=0
@@ -364,7 +365,15 @@ endfunction
 function! BuildProject(project_name)
     let g:msbuild_configuration = ' -p ' . a:project_name
     execute 'NeomakeCancelJobs'
-    execute 'cexpr ["building..."]'
+    execute 'cexpr ["building ' . a:project_name . '..."]'
+    execute 'Neomake! msbuildConfigurable'
+    execute 'copen'
+endfunction
+
+function! Build()
+    let g:msbuild_configuration = ''
+    execute 'NeomakeCancelJobs'
+    execute 'cexpr ["building everything..."]'
     execute 'Neomake! msbuildConfigurable'
     execute 'copen'
 endfunction
@@ -550,3 +559,7 @@ highlight DiffAdd    cterm=bold ctermfg=10 ctermbg=17 gui=none guifg=bg guibg=Re
 highlight DiffDelete cterm=bold ctermfg=10 ctermbg=17 gui=none guifg=bg guibg=Red
 highlight DiffChange cterm=bold ctermfg=10 ctermbg=17 gui=none guifg=bg guibg=Red
 highlight DiffText   cterm=bold ctermfg=10 ctermbg=88 gui=none guifg=bg guibg=Red
+highlight clear SignColumn
+
+" Disable bookmarks commands because they interfere with NERDTree
+let g:bookmark_no_default_key_mappings = 1

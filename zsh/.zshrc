@@ -9,6 +9,7 @@ plugins=(z git zsh-autosuggestions)
 DISABLE_LS_COLORS="true"
 
 # Uncomment the following line to enable command auto-correction.
-ENABLE_CORRECTION="true"
+ENABLE_CORRECTION="false"
 
 export PATH=$HOME/.local/bin:$HOME/bin:/usr/local/bin:$HOME/git/cloud-dev:/opt/mssql-tools/bin:$PATH
+export EDITOR=nvim
