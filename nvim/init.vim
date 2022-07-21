@@ -1,12 +1,12 @@
 call plug#begin()
-Plug 'scrooloose/nerdtree', { 'on':  'NERDTreeToggle' }
+" Plug 'scrooloose/nerdtree', { 'on':  'NERDTreeToggle' }
 Plug 'scrooloose/nerdcommenter'
-Plug 'sheerun/vim-polyglot'
+" Plug 'sheerun/vim-polyglot'
 Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
 Plug 'junegunn/fzf.vim'
 Plug 'mhinz/vim-startify'
-Plug 'vim-airline/vim-airline'
-Plug 'chrisbra/vim-diff-enhanced'
+" Plug 'vim-airline/vim-airline'
+" Plug 'chrisbra/vim-diff-enhanced'
 Plug 'majutsushi/tagbar'
 Plug 'tpope/vim-abolish'
 Plug 'tpope/vim-fugitive'
@@ -17,8 +17,173 @@ Plug 'ludovicchabant/vim-gutentags'
 Plug 'stefandtw/quickfix-reflector.vim'
 Plug 'neomake/neomake'
 Plug 'tpope/vim-sensible'
-Plug 'MattesGroeger/vim-bookmarks'
+Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
+Plug 'nvim-lua/plenary.nvim'
+Plug 'nvim-telescope/telescope.nvim'
+Plug 'kyazdani42/nvim-web-devicons'
+Plug 'kyazdani42/nvim-tree.lua'
+Plug 'nvim-lualine/lualine.nvim'
+"Plug 'wfxr/minimap.vim'
+Plug 'p00f/nvim-ts-rainbow'
+Plug 'neovim/nvim-lspconfig'
+Plug 'hrsh7th/cmp-nvim-lsp'
+Plug 'hrsh7th/cmp-buffer'
+Plug 'hrsh7th/cmp-path'
+Plug 'hrsh7th/cmp-cmdline'
+Plug 'hrsh7th/nvim-cmp'
+Plug 'phaazon/hop.nvim'
+Plug 'sindrets/diffview.nvim'
+Plug 'L3MON4D3/LuaSnip'
+Plug 'saadparwaiz1/cmp_luasnip'
+Plug 'ray-x/cmp-treesitter'
 call plug#end()
+
+set completeopt=menu,menuone,noselect
+
+lua << END
+require('nvim-web-devicons').setup()
+require("nvim-tree").setup({
+    view = {
+        adaptive_size = true,
+        mappings = {
+            list = {
+                { key = "H", action = "" },
+                { key = "L", action = "" },
+            },
+        },
+    },
+})
+require('lualine').setup()
+require('telescope').setup{
+	defaults = {
+      layout_strategy = "vertical",
+	},
+    pickers = {
+        buffers = {
+            sort_lastused = true,
+            ignore_current_buffer = true
+        },
+        tags = {
+            ctags_file = "~/git/panopto-core/.git/tags"
+        }
+    }
+  }
+require'nvim-treesitter.configs'.setup {
+  highlight = {
+    enable = true,
+    -- Setting this to true will run `:h syntax` and tree-sitter at the same time.
+    -- Set this to `true` if you depend on 'syntax' being enabled (like for indentation).
+    -- Using this option may slow down your editor, and you may see some duplicate highlights.
+    -- Instead of true it can also be a list of languages
+    additional_vim_regex_highlighting = false,
+  },
+  indent = {
+    enable = true
+  },
+  rainbow = {
+    enable = true,
+    -- disable = { "jsx", "cpp" }, list of languages you want to disable the plugin for
+    extended_mode = true, -- Also highlight non-bracket delimiters like html tags, boolean or table: lang -> boolean
+    max_file_lines = nil, -- Do not enable for files with more than n lines, int
+    -- colors = {}, -- table of hex strings
+    -- termcolors = {} -- table of colour name strings
+  },
+}
+require'hop'.setup()
+-- Setup nvim-cmp.
+local cmp = require'cmp'
+local luasnip = require("luasnip")
+
+local has_words_before = function()
+  local line, col = unpack(vim.api.nvim_win_get_cursor(0))
+  return col ~= 0 and vim.api.nvim_buf_get_lines(0, line - 1, line, true)[1]:sub(col, col):match("%s") == nil
+end
+
+cmp.setup({
+snippet = {
+    -- REQUIRED - you must specify a snippet engine
+    expand = function(args)
+    --vim.fn["vsnip#anonymous"](args.body) -- For `vsnip` users.
+    require('luasnip').lsp_expand(args.body) -- For `luasnip` users.
+    -- require('snippy').expand_snippet(args.body) -- For `snippy` users.
+    -- vim.fn["UltiSnips#Anon"](args.body) -- For `ultisnips` users.
+    end,
+},
+window = {
+    -- completion = cmp.config.window.bordered(),
+    -- documentation = cmp.config.window.bordered(),
+},
+mapping = cmp.mapping.preset.insert({
+    ['<C-b>'] = cmp.mapping.scroll_docs(-4),
+    ['<C-f>'] = cmp.mapping.scroll_docs(4),
+    ['<C-Space>'] = cmp.mapping.complete(),
+    ['<C-e>'] = cmp.mapping.abort(),
+    ['<CR>'] = cmp.mapping.confirm({ select = true }), -- Accept currently selected item. Set `select` to `false` to only confirm explicitly selected items.
+}),
+mapping = {
+    ["<Tab>"] = cmp.mapping(function(fallback)
+      -- This little snippet will confirm with tab, and if no entry is selected, will confirm the first item
+      if cmp.visible() then
+        local entry = cmp.get_selected_entry()
+        if not entry then
+        cmp.select_next_item({ behavior = cmp.SelectBehavior.Select })
+        else
+        cmp.confirm()
+        end
+      else
+        fallback()
+      end
+    end, { "i", "s" }),
+
+    ["<S-Tab>"] = cmp.mapping(function(fallback)
+      if cmp.visible() then
+        cmp.select_prev_item()
+      elseif luasnip.jumpable(-1) then
+        luasnip.jump(-1)
+      else
+        fallback()
+      end
+    end, { "i", "s" }),
+},
+sources = cmp.config.sources({
+    { name = 'nvim_lsp' },
+    --{ name = 'vsnip' }, -- For vsnip users.
+    { name = 'luasnip' }, -- For luasnip users.
+    -- { name = 'ultisnips' }, -- For ultisnips users.
+    -- { name = 'snippy' }, -- For snippy users.
+},
+{
+    { name = 'buffer' },
+    { name = 'treesitter' },
+}),
+})
+
+-- Set configuration for specific filetype.
+-- Use buffer source for `/` (if you enabled `native_menu`, this won't work anymore).
+cmp.setup.cmdline('/', {
+mapping = cmp.mapping.preset.cmdline(),
+sources = {
+    { name = 'buffer' }
+}
+})
+
+-- Use cmdline & path source for ':' (if you enabled `native_menu`, this won't work anymore).
+cmp.setup.cmdline(':', {
+mapping = cmp.mapping.preset.cmdline(),
+sources = cmp.config.sources({
+    { name = 'path' }
+}, {
+    { name = 'cmdline' }
+})
+})
+
+-- Setup lspconfig.
+--local capabilities = require('cmp_nvim_lsp').update_capabilities(vim.lsp.protocol.make_client_capabilities())
+-- Replace <YOUR_LSP_SERVER> with each lsp server you've enabled.
+--require('lspconfig')['<YOUR_LSP_SERVER>'].setup {
+--capabilities = capabilities
+--}
+END
 
 " ZSH!
 set shell=/usr/bin/zsh
@@ -43,9 +208,6 @@ set hlsearch
 " in your search query, Vim will search case-sensitive).
 set ignorecase 
 set smartcase
-
-" Horizontal cursor line
-set cursorline
 
 " Turning on line wrapping and line-break for easy text-file editing.
 set wrap
@@ -89,6 +251,7 @@ syntax on
 
 " Show matching parens
 set showmatch
+highlight MatchParen ctermbg=None ctermfg=red
 
 " Syntax highlighting tweaks
 autocmd BufNewFile,BufReadPost *.config set filetype=xml
@@ -104,8 +267,8 @@ set nobackup
 set noswapfile
 
 " Make NERDTree wider
-let g:NERDTreeWinSize=50
-let g:NERDTreeWinPos="right"
+" let g:NERDTreeWinSize=50
+" let g:NERDTreeWinPos="right"
 
 " Fix :W mistake
 command! WQ wq
@@ -174,7 +337,7 @@ let g:tagbar_width=100
 let g:tagbar_autofocus=1
 
 " Tags settings
-set tags="./tags;,tags,~/src/panopto-core/.git/tags"
+set tags="./tags;,tags
 
 " Configure EasyMotion
 " Plug 'easymotion/vim-easymotion'
@@ -321,7 +484,7 @@ command! -bang -nargs=* Find call fzf#vim#grep('rg --column --line-number --no-h
 " let g:airline_section_b = ''
 " let g:airline_section_c = '%f'
 " let g:airline_section_warning = ''
-let g:airline#extensions#neomake#enabled = 1
+" let g:airline#extensions#neomake#enabled = 1
 
 " Make
 set makeprg=python3\ ~/git/cloud-dev/devbox.py
@@ -469,8 +632,8 @@ nmap <leader>j :grep! "" \| cw<Left><Left><Left><Left><Left><Left>
 nmap <leader>J :grep! "" "%:h" \| cw<Left><Left><Left><Left><Left><Left><Left><Left><Left><Left><Left><Left>
 nmap <leader>k :grep! "\b<cword>\b"<CR>:cw<CR>
 nmap <leader>K :grep! "\b<cword>\b" "%:h" \| cw
-nmap <leader>l :lvimgrepa! "\b<cword>\b"<CR>:cw<CR>
-nmap <leader>L :lvimgrepa! -i "\b<cword>\b"<CR>:cw<CR>
+nmap <leader>l :Telescope quickfix
+nmap <leader>L :Telescope quickfixhistory
 vmap <leader>k :<C-U>execute('grep! "\b' . Get_visual_selection() . '\b"')<CR>:cw<CR>
 vmap <leader>K :<C-U>execute('grep! "\b' . Get_visual_selection(o % . '\b" "%:h"') \| cw
 
@@ -490,8 +653,10 @@ map <leader>N :ln<CR>
 map <leader>M :if empty(filter(getwininfo(), 'v:val.quickfix')) \| lopen \| else \| lclose \| endif<CR>
 
 " IDE <leader>ert
-map <leader>t :NERDTreeToggle<CR>
-map <leader>T :NERDTreeFind<CR>
+" map <leader>t :NERDTreeToggle<CR>
+" map <leader>T :NERDTreeFind<CR>
+map <leader>t :NvimTreeToggle<CR>
+map <leader>T :NvimTreeFindFileToggle<CR>
 map <leader>r :TagbarToggle<CR>
 map <leader>e :call GstatusToggle()<CR>
 
@@ -509,19 +674,32 @@ map <leader>w :only<CR>
 tmap <leader>w <C-\><C-n>:only<CR>
 map <leader>W :close<CR>
 tmap <leader>W <C-\><C-n>:close<CR>
-map <leader>Q :term
+map <leader>Q :Telescope jumplist<CR>
+tmap <leader>Q <C-\><C-n>:Telescope jumplist<CR>
 
 " FZF <leader>asdfg
-map  <Leader>a :BLines<CR>
-tmap <Leader>a <C-\><C-n>:BLines<CR>
-map  <Leader>s :BTags<CR>
-tmap <Leader>s <C-\><C-n>:BTags<CR>
-map  <Leader>b :Buffers<CR>
-tmap <Leader>b <C-\><C-n>:Buffers<CR>
-map  <Leader>f :Tags<CR>
-tmap <Leader>f <C-\><C-n>:Tags<CR>
-map  <Leader>g :Files<CR>
-tmap <Leader>g <C-\><C-n>:Files<CR>
+" map  <Leader>a :BLines<CR>
+" tmap <Leader>a <C-\><C-n>:BLines<CR>
+" map  <Leader>s :BTags<CR>
+" tmap <Leader>s <C-\><C-n>:BTags<CR>
+" map  <Leader>b :Buffers<CR>
+" tmap <Leader>b <C-\><C-n>:Buffers<CR>
+" map  <Leader>f :Tags<CR>
+" tmap <Leader>f <C-\><C-n>:Tags<CR>
+" map  <Leader>g :Files<CR>
+" tmap <Leader>g <C-\><C-n>:Files<CR>
+map  <Leader>a :Telescope current_buffer_fuzzy_find<CR>
+tmap <Leader>a <C-\><C-n>:Telescope current_buffer_fuzzy_find<CR>
+map  <Leader>s :Telescope treesitter<CR>
+tmap <Leader>s <C-\><C-n>:Telescope treesitter<CR>
+map  <Leader>b :Telescope buffers<CR>
+tmap <Leader>b <C-\><C-n>:Telescope buffers<CR>
+map  <Leader>f :Telescope tags<CR>
+tmap <Leader>f <C-\><C-n>:Telescope tags<CR>
+map  <Leader>g :Telescope find_files<CR>
+tmap <Leader>g <C-\><C-n>:Telescope find_files<CR>
+map  <Leader>G :Telescope oldfiles<CR>
+tmap <Leader>G <C-\><C-n>:Telescope oldfiles<CR>
 
 " Make nvr git integration work with wq
 autocmd FileType gitcommit,gitrebase,gitconfig set bufhidden=delete
@@ -545,7 +723,7 @@ endfunction
 
 imap <C-t> <CMD>:call CompleteInf()<CR>
 
-set completeopt=longest,menuone
+"set completeopt=longest,menuone
 inoremap <expr> <CR> pumvisible() ? "\<C-y>" : "\<C-g>u\<CR>"
 
 inoremap <expr> <C-n> pumvisible() ? '<C-n>' :
@@ -563,3 +741,29 @@ highlight clear SignColumn
 
 " Disable bookmarks commands because they interfere with NERDTree
 let g:bookmark_no_default_key_mappings = 1
+
+" Minimap
+"let g:minimap_width = 10
+"let g:minimap_auto_start = 1
+"let g:minimap_auto_start_win_enter = 1
+
+" Menu appearance
+
+" gray
+highlight! CmpItemAbbrDeprecated guibg=NONE gui=strikethrough guifg=#808080
+" blue
+highlight! CmpItemAbbrMatch guibg=NONE guifg=#569CD6
+highlight! CmpItemAbbrMatchFuzzy guibg=NONE guifg=#569CD6
+" light blue
+highlight! CmpItemKindVariable guibg=NONE guifg=#9CDCFE
+highlight! CmpItemKindInterface guibg=NONE guifg=#9CDCFE
+highlight! CmpItemKindText guibg=NONE guifg=#9CDCFE
+" pink
+highlight! CmpItemKindFunction guibg=NONE guifg=#C586C0
+highlight! CmpItemKindMethod guibg=NONE guifg=#C586C0
+" front
+highlight! CmpItemKindKeyword guibg=NONE guifg=#D4D4D4
+highlight! CmpItemKindProperty guibg=NONE guifg=#D4D4D4
+highlight! CmpItemKindUnit guibg=NONE guifg=#D4D4D4
+" menu
+highlight! Pmenu ctermbg=NONE ctermfg=NONE

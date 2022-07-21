@@ -16,7 +16,8 @@ sudo apt install -y \
     vlc \
     keepassxc \
     sshfs \
-    apt-transport-https
+    apt-transport-https \
+    fd-find
 
 snap install --classic slack
 
